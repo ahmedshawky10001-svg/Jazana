@@ -173,6 +173,10 @@ function chatInit() {
 function ask(i) {
   say(t(QA[i][0], QA[i][1]), "u");
   setTimeout(() => say(t(QA[i][2], QA[i][3])), 300);
+  // نسجل السؤال والرد في تاريخ المحادثة عشان الـ AI يفهم الأسئلة اللي بعدهم
+  hist.push({ role: "user", content: t(QA[i][0], QA[i][1]) });
+  hist.push({ role: "assistant", content: t(QA[i][2], QA[i][3]) });
+  hist = hist.slice(-6);
 }
 
 /* ===== مساعد جازانا الذكي (Cloudflare Workers AI) ===== */
@@ -215,21 +219,31 @@ function sayWA(m) {
   $("#cm").append(d);
   $("#cm").scrollTop = 1e9;
 }
+// خدمة العملاء مفتوحة؟ (9 ص - 10 م بتوقيت السعودية) - بنستخدمها بس لو الـ AI وقع
+function csOpenNow() {
+  const h = parseInt(
+    new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Riyadh", hour: "2-digit", hourCycle: "h23" }).format(new Date()),
+    10,
+  );
+  return h >= 9 && h < 22;
+}
+function csFallbackMsg() {
+  return csOpenNow()
+    ? t(
+        "بكل سرور! فريق خدمة العملاء متواجد يوميا من 9 صباحا حتى 10 مساء.",
+        "Of course! Our customer service team is available daily from 9 AM to 10 PM.",
+      )
+    : t(
+        "فريق خدمة العملاء مغلق حاليا، ويعمل يوميا من 9 صباحا حتى 10 مساء بتوقيت السعودية. تقدر تبعت رسالتك على واتساب.",
+        "Customer service is closed right now. It works daily from 9 AM to 10 PM Saudi time. You can still send your message on WhatsApp.",
+      );
+}
 async function submitChat() {
   const inp = $("#ci");
   const txt = inp.value.trim().slice(0, 300);
   if (!txt || busy) return;
   inp.value = "";
   say(txt, "u");
-  if (WA_RE.test(norm(txt))) {
-    sayWA(
-      t(
-        "بكل سرور! فريق خدمة العملاء متواجد يوميا من 9 صباحا حتى 10 مساء.",
-        "Of course! Our customer service team is available daily from 9 AM to 10 PM.",
-      ),
-    );
-    return;
-  }
   if (AI_URL.startsWith("PUT_")) {
     sayWA(t("اختر سؤالا من الأسفل أو تواصل معنا مباشرة.", "Pick a question below or contact us directly."));
     return;
@@ -259,12 +273,16 @@ async function submitChat() {
   } catch (e) {
     tp.remove();
     hist.pop();
-    sayWA(
-      t(
-        "عذرا، المساعد غير متاح حاليا. اختر سؤالا من الأسفل أو تواصل معنا على واتساب.",
-        "Sorry, the assistant is unavailable right now. Pick a question below or chat with us on WhatsApp.",
-      ),
-    );
+    if (WA_RE.test(norm(txt))) {
+      sayWA(csFallbackMsg());
+    } else {
+      sayWA(
+        t(
+          "عذرا، المساعد غير متاح حاليا. اختر سؤالا من الأسفل أو تواصل معنا على واتساب.",
+          "Sorry, the assistant is unavailable right now. Pick a question below or chat with us on WhatsApp.",
+        ),
+      );
+    }
   } finally {
     clearTimeout(to);
     busy = false;
