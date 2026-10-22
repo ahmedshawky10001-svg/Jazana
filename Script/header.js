@@ -22,3 +22,6 @@ document.body.insertAdjacentHTML(
   "afterbegin",
   fixPaths('<div id="h">' + HEAD + "</div>"),
 );
+
+// تحميل ملف الربط مع الباك إند قبل app.js (من غير ما نعدّل أي صفحة HTML)
+document.write('<script src="' + ROOT + 'Script/api.js"><\/script>');

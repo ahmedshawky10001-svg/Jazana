@@ -44,74 +44,42 @@ const QA = [
   ],
 ];
 
-// المنتجات: [الاسم عربي, الاسم إنجليزي, الوصف عربي, الوصف إنجليزي, السعر, السعر قبل الخصم, الحجم عربي, الحجم إنجليزي, الصورة]
-const DESC_AR = "عصرة أولى من بذور جازان، خالٍ من المواد الحافظة والإضافات الكيميائية.";
-const DESC_EN = "First press from Jazan seeds, free from preservatives and chemical additives.";
-const PR = {
-  oil250: [
-    "زيت سمسم بلدي",
-    "Local Sesame Oil",
-    DESC_AR,
-    DESC_EN,
-    21,
-    0,
-    "250 مل",
-    "250 ml",
-    ROOT + "imges/250-size product.webp",
-  ],
-  oil500: [
-    "زيت سمسم بلدي",
-    "Local Sesame Oil",
-    DESC_AR,
-    DESC_EN,
-    33,
-    0,
-    "500 مل",
-    "500 ml",
-    ROOT + "imges/500-size product.webp",
-  ],
-  bundle: [
-    "عبوتان من زيت السمسم البلدي",
-    "Local Sesame Oil – 2 bottles",
-    "وفّر 4 ر.س عند شراء عبوتين",
-    "Save 4 SAR on two bottles",
-    38,
-    42,
-    "2 × 250 مل",
-    "2 × 250 ml",
-    ROOT + "imges/jazana_offer_2x250_500x330.webp",
-  ],
-  promo: [
-    "اشترِ 3 عبوات 500 مل واحصل على عبوة 250 مل هدية",
-    "Buy 3 bottles (500 ml), get a 250 ml bottle free",
-    "ثلاث عبوات من زيت السمسم البلدي (500 مل) + عبوة 250 مل هدية مجانًا.",
-    "Three bottles of local sesame oil (500 ml) + a free 250 ml bottle as a gift.",
-    99,
-    0,
-    "3 × 500 مل + هدية 250 مل",
-    "3 × 500 ml + free 250 ml",
-    ROOT + "imges/jazana_offer_3x500_plus_250gift_500x330.webp",
-  ],
-};
-// التبويبات: [الاسم عربي, الاسم إنجليزي, [المنتجات], شارة عربي, شارة إنجليزي]
+// المنتجات بتيجي من الـ API (Script/api.js). أي تعديل من لوحة الأدمن بيظهر هنا فورًا.
+let PRODUCTS = [],
+  PSTATE = "loading"; // loading | ok | error
+// التبويبات: [الاسم عربي, الاسم إنجليزي, فلتر المنتجات, شارة عربي, شارة إنجليزي]
 const TABS = [
-  [
-    "زيت السمسم البلدي",
-    "Local sesame oil",
-    ["oil250", "oil500"],
-    "طبيعي 100%",
-    "100% natural",
-  ],
-  ["الأكثر مبيعا", "Best sellers", ["oil250"], "الأكثر مبيعا", "Best seller"],
-  ["أحدث المنتجات", "Newest", ["oil250"], "جديد", "New"],
-  [
-    "باقات الهدايا والتوفير",
-    "Gifts & savings",
-    ["bundle", "promo"],
-    "عرض",
-    "Offer",
-  ],
+  ["زيت السمسم البلدي", "Local sesame oil", (p) => p.category == "oil", "طبيعي 100%", "100% natural"],
+  ["الأكثر مبيعا", "Best sellers", (p) => p.is_best, "الأكثر مبيعا", "Best seller"],
+  ["أحدث المنتجات", "Newest", (p) => p.is_new, "جديد", "New"],
+  ["باقات الهدايا والتوفير", "Gifts & savings", (p) => p.category == "bundle", "عرض", "Offer"],
 ];
+const pimg = (s) => (/^https?:\/\//i.test(s) ? s : ROOT + s);
+const curTab = () => {
+  const b = $("#tabs") ? [...$("#tabs").children].findIndex((x) => x.classList.contains("on")) : 0;
+  return b < 0 ? 0 : b;
+};
+function refreshShop() {
+  shop(curTab());
+}
+async function loadProducts() {
+  if (!$("#tabs")) return; // الصفحات اللي مفيهاش قسم المنتجات (about, privacy...) مش محتاجة طلب API
+  PSTATE = "loading";
+  if (window.JZ) refreshShop();
+  const wake = setTimeout(() => {
+    const m = PSTATE == "loading" && $("#pg p");
+    if (m) m.textContent = t("الخادم بيتم تشغيله، ممكن ياخد حوالي دقيقة...", "The server is waking up, this may take up to a minute...");
+  }, 6000);
+  try {
+    if (!window.JZ) await new Promise((r) => window.addEventListener("load", r, { once: true })); // لو api.js لسه ماتحمّلش
+    PRODUCTS = (await JZ.api("/api/products")).products;
+    PSTATE = "ok";
+  } catch (e) {
+    PSTATE = "error";
+  }
+  clearTimeout(wake);
+  refreshShop();
+}
 
 function shop(i = 0) {
   const g = $("#tabs");
@@ -120,23 +88,33 @@ function shop(i = 0) {
     (x, k) =>
       `<button class="${k == i ? "on" : ""}" onclick="shop(${k})">${t(x[0], x[1])}</button>`,
   ).join("");
-  const e = lang == "en";
-  $("#pg").innerHTML = TABS[i][2]
-    .map((key) => {
-      const p = PR[key];
-      return `<article class="pd"><span class="hrt"><i class="fa-regular fa-heart"></i></span><span class="bdg">${t(TABS[i][3], TABS[i][4])}</span><div class="ph"><img src="${p[8]}" alt="${p[e ? 1 : 0]}" loading="lazy"></div>
-<div class="m"><span>${t("الحجم: ", "Size: ")}${p[e ? 7 : 6]}</span><span>${STAR(5)}</span></div><h3>${p[e ? 1 : 0]}</h3><p>${p[e ? 3 : 2]}</p>
-<div class="r"><button class="btn b1" onclick="add(${p[4]})"><i class="fa-solid fa-cart-plus"></i> ${t("أضف للسلة", "Add to cart")}</button><span class="pr">${p[5] ? `<s>${p[5]}</s>` : ""}${p[4]} ${t("ر.س", "SAR")}</span></div></article>`;
+  const e = lang == "en",
+    box = $("#pg"),
+    msg = 'style="grid-column:1/-1;text-align:center;color:#8a7a66;padding:30px 0"';
+  if (PSTATE == "loading") {
+    box.innerHTML = `<p ${msg}>${t("جاري تحميل المنتجات...", "Loading products...")}</p>`;
+    return;
+  }
+  if (PSTATE == "error") {
+    box.innerHTML = `<p ${msg}>${t("تعذّر تحميل المنتجات حاليًا. تأكد من اتصالك بالإنترنت ثم أعد المحاولة.", "Could not load products. Check your connection and try again.")}<br><br><button class="btn b1" onclick="loadProducts()">${t("إعادة المحاولة", "Retry")}</button></p>`;
+    return;
+  }
+  const list = PRODUCTS.filter(TABS[i][2]);
+  if (!list.length) {
+    box.innerHTML = `<p ${msg}>${t("لا توجد منتجات في هذا القسم حاليًا.", "No products in this section right now.")}</p>`;
+    return;
+  }
+  box.innerHTML = list
+    .map((p) => {
+      const name = e ? p.name_en || p.name_ar : p.name_ar,
+        desc = e ? p.desc_en || p.desc_ar : p.desc_ar,
+        size = e ? p.size_en || p.size_ar : p.size_ar,
+        fav = JZ.isFav(p.id);
+      return `<article class="pd"><span class="hrt${fav ? " on" : ""}" role="button" tabindex="0" aria-label="${t("المفضلة", "Wishlist")}" onclick="JZ.toggleFav(${p.id})"><i class="fa-${fav ? "solid" : "regular"} fa-heart"></i></span><span class="bdg">${t(TABS[i][3], TABS[i][4])}</span><div class="ph"><img src="${JZ.esc(pimg(p.image))}" alt="${JZ.esc(name)}" loading="lazy"></div>
+<div class="m"><span>${t("الحجم: ", "Size: ")}${JZ.esc(size)}</span><span>${STAR(5)}</span></div><h3>${JZ.esc(name)}</h3><p>${JZ.esc(desc)}</p>
+<div class="r"><button class="btn b1" ${p.is_available ? `onclick="JZ.addToCart(${p.id})"` : "disabled"}>${p.is_available ? `<i class="fa-solid fa-cart-plus"></i> ${t("أضف للسلة", "Add to cart")}` : t("غير متاح", "Unavailable")}</button><span class="pr">${p.old_price ? `<s>${p.old_price}</s>` : ""}${p.price} ${t("ر.س", "SAR")}</span></div></article>`;
     })
     .join("");
-}
-function add(v) {
-  cart += v;
-  $("#ct").textContent = cart;
-  const c = $(".cart");
-  c.classList.remove("bump");
-  void c.offsetWidth;
-  c.classList.add("bump");
 }
 function setLang(l) {
   lang = l;
@@ -304,7 +282,7 @@ $("#ci").addEventListener("keydown", (e) => {
   }
 });
 chatInit();
-shop(0);
+loadProducts();
 if (lang == "en") setLang("en");
 
 /* ===== إصلاحات القائمة الجانبية في الموبايل ===== */
