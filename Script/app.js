@@ -59,29 +59,69 @@ const curTab = () => {
   const b = $("#tabs") ? [...$("#tabs").children].findIndex((x) => x.classList.contains("on")) : 0;
   return b < 0 ? 0 : b;
 };
-// البحث: بيستخدم نفس قائمة PRODUCTS ونفس شبكة العرض (#pg)
+// البحث: قايمة نتائج تحت حقل البحث (من نفس PRODUCTS). صفحة/كارت المنتج بيتفتح بس لما المستخدم يختار نتيجة
 let sq = "";
 const srInput = () => document.querySelector(".sr input");
-function clearSearch() {
-  sq = "";
-  const i = srInput();
-  if (i) i.value = "";
+const pName = (p) => (lang == "en" ? p.name_en || p.name_ar : p.name_ar);
+function closeSearch() {
+  const b = $("#sres");
+  if (b) b.hidden = true;
 }
-function runSearch(q) {
-  q = (q == null ? (srInput() || {}).value || "" : q).trim();
+function renderSearch() {
+  const f = document.querySelector("form.sr");
+  if (!f) return;
+  let b = $("#sres");
+  if (!b) {
+    b = document.createElement("div");
+    b.id = "sres";
+    f.append(b);
+  }
+  b.hidden = !sq;
+  if (!sq) return;
+  if (PSTATE == "loading") return void (b.innerHTML = `<p>${t("جاري تحميل المنتجات...", "Loading products...")}</p>`);
+  if (PSTATE == "error") return void (b.innerHTML = `<p>${t("تعذّر تحميل المنتجات حاليًا.", "Could not load products.")}</p>`);
+  const nq = norm(sq);
+  const list = PRODUCTS.filter((p) =>
+    norm([p.name_ar, p.name_en, p.desc_ar, p.desc_en, p.size_ar, p.size_en].filter(Boolean).join(" ")).includes(nq),
+  );
+  b.innerHTML = list.length
+    ? list
+        .map(
+          (p) =>
+            `<button type="button" class="sri" data-id="${JZ.esc(p.id)}"><img src="${JZ.esc(pimg(p.image))}" alt=""><span class="srn">${JZ.esc(pName(p))}</span><b>${JZ.esc(p.price)} ${t("ر.س", "SAR")}</b></button>`,
+        )
+        .join("")
+    : `<p>${t("لم يتم العثور على منتجات مطابقة لـ", "No matching products found for")} «${JZ.esc(sq)}»</p>`;
+}
+function runSearch() {
+  const q = ((srInput() || {}).value || "").trim();
   if (!$("#pg")) {
     // صفحة فرعية (about/privacy...) نروح للرئيسية ونبحث هناك
-    if (q) location.href = ROOT + "index.html?q=" + encodeURIComponent(q) + "#shop";
+    if (q) location.href = ROOT + "index.html?q=" + encodeURIComponent(q);
     return false;
   }
   sq = q;
-  refreshShop();
-  const sh = $("#shop");
-  if (sh && q) sh.scrollIntoView({ behavior: "smooth", block: "start" });
+  renderSearch();
   return false;
+}
+function pickProduct(id) {
+  closeSearch();
+  sq = "";
+  const i = srInput();
+  if (i) i.value = "";
+  let k = TABS.findIndex((x) => PRODUCTS.some((p) => p.id == id && x[2](p)));
+  shop(k < 0 ? 0 : k);
+  const el = document.getElementById("p" + id);
+  const target = el || $("#shop");
+  if (target) target.scrollIntoView({ behavior: "smooth", block: el ? "center" : "start" });
+  if (el) {
+    el.classList.add("hit");
+    setTimeout(() => el.classList.remove("hit"), 2500);
+  }
 }
 function refreshShop() {
   shop(curTab());
+  if (sq) renderSearch();
 }
 async function loadProducts() {
   if (!$("#tabs")) return; // الصفحات اللي مفيهاش قسم المنتجات (about, privacy...) مش محتاجة طلب API
@@ -102,13 +142,12 @@ async function loadProducts() {
   refreshShop();
 }
 
-function shop(i = 0, fromTab) {
+function shop(i = 0) {
   const g = $("#tabs");
   if (!g) return;
-  if (fromTab) clearSearch(); // الضغط على تبويب يلغي نتائج البحث
   g.innerHTML = TABS.map(
     (x, k) =>
-      `<button class="${k == i ? "on" : ""}" onclick="shop(${k},1)">${t(x[0], x[1])}</button>`,
+      `<button class="${k == i ? "on" : ""}" onclick="shop(${k})">${t(x[0], x[1])}</button>`,
   ).join("");
   const e = lang == "en",
     box = $("#pg"),
@@ -121,33 +160,18 @@ function shop(i = 0, fromTab) {
     box.innerHTML = `<p ${msg}>${t("تعذّر تحميل المنتجات حاليًا. تأكد من اتصالك بالإنترنت ثم أعد المحاولة.", "Could not load products. Check your connection and try again.")}<br><br><button class="btn b1" onclick="loadProducts()">${t("إعادة المحاولة", "Retry")}</button></p>`;
     return;
   }
-  const nq = norm(sq);
-  const list = nq
-    ? PRODUCTS.filter((p) =>
-        norm([p.name_ar, p.name_en, p.desc_ar, p.desc_en, p.size_ar, p.size_en].filter(Boolean).join(" ")).includes(nq),
-      )
-    : PRODUCTS.filter(TABS[i][2]);
-  const clr = `<button class="btn b2" onclick="clearSearch();shop(0)">${t("عرض كل المنتجات", "Show all products")}</button>`;
-  if (nq) {
-    g.querySelectorAll("button").forEach((b) => b.classList.remove("on"));
-    if (!list.length) {
-      box.innerHTML = `<p ${msg}>${t("لا توجد نتائج لـ", "No results for")} «${JZ.esc(sq)}»<br><br>${clr}</p>`;
-      return;
-    }
-  } else if (!list.length) {
+  const list = PRODUCTS.filter(TABS[i][2]);
+  if (!list.length) {
     box.innerHTML = `<p ${msg}>${t("لا توجد منتجات في هذا القسم حاليًا.", "No products in this section right now.")}</p>`;
     return;
   }
-  const head = nq
-    ? `<p ${msg}>${t("نتائج البحث عن", "Search results for")} «${JZ.esc(sq)}» (${list.length})<br><br>${clr}</p>`
-    : "";
-  box.innerHTML = head + list
+  box.innerHTML = list
     .map((p) => {
       const name = e ? p.name_en || p.name_ar : p.name_ar,
         desc = e ? p.desc_en || p.desc_ar : p.desc_ar,
         size = e ? p.size_en || p.size_ar : p.size_ar,
         fav = JZ.isFav(p.id);
-      return `<article class="pd"><span class="hrt${fav ? " on" : ""}" role="button" tabindex="0" aria-label="${t("المفضلة", "Wishlist")}" onclick="JZ.toggleFav(${p.id})"><i class="fa-${fav ? "solid" : "regular"} fa-heart"></i></span><span class="bdg">${nq ? (p.category == "bundle" ? t(TABS[3][3], TABS[3][4]) : t(TABS[0][3], TABS[0][4])) : t(TABS[i][3], TABS[i][4])}</span><div class="ph"><img src="${JZ.esc(pimg(p.image))}" alt="${JZ.esc(name)}" loading="lazy"></div>
+      return `<article class="pd" id="p${p.id}"><span class="hrt${fav ? " on" : ""}" role="button" tabindex="0" aria-label="${t("المفضلة", "Wishlist")}" onclick="JZ.toggleFav(${p.id})"><i class="fa-${fav ? "solid" : "regular"} fa-heart"></i></span><span class="bdg">${t(TABS[i][3], TABS[i][4])}</span><div class="ph"><img src="${JZ.esc(pimg(p.image))}" alt="${JZ.esc(name)}" loading="lazy"></div>
 <div class="m"><span>${t("الحجم: ", "Size: ")}${JZ.esc(size)}</span><span>${STAR(5)}</span></div><h3>${JZ.esc(name)}</h3><p>${JZ.esc(desc)}</p>
 <div class="r"><button class="btn b1" ${p.is_available ? `onclick="JZ.addToCart(${p.id})"` : "disabled"}>${p.is_available ? `<i class="fa-solid fa-cart-plus"></i> ${t("أضف للسلة", "Add to cart")}` : t("غير متاح", "Unavailable")}</button><span class="pr">${p.old_price ? `<s>${p.old_price}</s>` : ""}${p.price} ${t("ر.س", "SAR")}</span></div></article>`;
     })
@@ -344,20 +368,23 @@ if (lang == "en") setLang("en");
   f.addEventListener("submit", (e) => {
     e.preventDefault();
     runSearch();
-    const i = srInput();
-    if (i) i.blur(); // يقفل الكيبورد على الموبايل عشان النتائج تبان
   });
   srInput().addEventListener("input", (e) => {
-    if (!e.target.value.trim() && sq) {
-      sq = "";
-      refreshShop();
-    }
+    sq = e.target.value.trim();
+    if ($("#pg")) renderSearch();
+  });
+  f.addEventListener("click", (e) => {
+    const r = e.target.closest(".sri");
+    if (r) pickProduct(r.dataset.id);
+  });
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("form.sr")) closeSearch();
   });
   const q0 = new URLSearchParams(location.search).get("q");
   if (q0 && $("#pg")) {
     srInput().value = q0;
     sq = q0.trim();
-    refreshShop();
+    renderSearch();
   }
 })();
 
