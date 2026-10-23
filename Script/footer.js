@@ -12,5 +12,5 @@ document.body.insertAdjacentHTML(
   "beforeend",
   fixPaths(FOOT) +
     `<button id="cb" aria-label="chat" onclick="document.getElementById('cw').classList.toggle('on')"><i class="fa-solid fa-comments"></i></button>
-<div id="cw"><header id="cwt"></header><div id="cm"></div><div id="cq"></div><div id="cin"><input id="ci" type="text" maxlength="300" autocomplete="off" enterkeyhint="send"><button id="csd" type="button" aria-label="send"><i class="fa-solid fa-paper-plane"></i></button></div><a class="wa" id="cwa" target="_blank" rel="noopener" href="https://wa.me/${WA}"></a></div>`,
+<div id="cw"><header id="cwt"></header><div id="cm"></div><div id="cin"><input id="ci" type="text" maxlength="300" autocomplete="off" enterkeyhint="send"><button id="csd" type="button" aria-label="send"><i class="fa-solid fa-paper-plane"></i></button></div><a class="wa" id="cwa" target="_blank" rel="noopener" href="https://wa.me/${WA}"></a></div>`,
 );

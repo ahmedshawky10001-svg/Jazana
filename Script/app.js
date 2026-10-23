@@ -59,6 +59,27 @@ const curTab = () => {
   const b = $("#tabs") ? [...$("#tabs").children].findIndex((x) => x.classList.contains("on")) : 0;
   return b < 0 ? 0 : b;
 };
+// البحث: بيستخدم نفس قائمة PRODUCTS ونفس شبكة العرض (#pg)
+let sq = "";
+const srInput = () => document.querySelector(".sr input");
+function clearSearch() {
+  sq = "";
+  const i = srInput();
+  if (i) i.value = "";
+}
+function runSearch(q) {
+  q = (q == null ? (srInput() || {}).value || "" : q).trim();
+  if (!$("#pg")) {
+    // صفحة فرعية (about/privacy...) نروح للرئيسية ونبحث هناك
+    if (q) location.href = ROOT + "index.html?q=" + encodeURIComponent(q) + "#shop";
+    return false;
+  }
+  sq = q;
+  refreshShop();
+  const sh = $("#shop");
+  if (sh && q) sh.scrollIntoView({ behavior: "smooth", block: "start" });
+  return false;
+}
 function refreshShop() {
   shop(curTab());
 }
@@ -81,12 +102,13 @@ async function loadProducts() {
   refreshShop();
 }
 
-function shop(i = 0) {
+function shop(i = 0, fromTab) {
   const g = $("#tabs");
   if (!g) return;
+  if (fromTab) clearSearch(); // الضغط على تبويب يلغي نتائج البحث
   g.innerHTML = TABS.map(
     (x, k) =>
-      `<button class="${k == i ? "on" : ""}" onclick="shop(${k})">${t(x[0], x[1])}</button>`,
+      `<button class="${k == i ? "on" : ""}" onclick="shop(${k},1)">${t(x[0], x[1])}</button>`,
   ).join("");
   const e = lang == "en",
     box = $("#pg"),
@@ -99,18 +121,33 @@ function shop(i = 0) {
     box.innerHTML = `<p ${msg}>${t("تعذّر تحميل المنتجات حاليًا. تأكد من اتصالك بالإنترنت ثم أعد المحاولة.", "Could not load products. Check your connection and try again.")}<br><br><button class="btn b1" onclick="loadProducts()">${t("إعادة المحاولة", "Retry")}</button></p>`;
     return;
   }
-  const list = PRODUCTS.filter(TABS[i][2]);
-  if (!list.length) {
+  const nq = norm(sq);
+  const list = nq
+    ? PRODUCTS.filter((p) =>
+        norm([p.name_ar, p.name_en, p.desc_ar, p.desc_en, p.size_ar, p.size_en].filter(Boolean).join(" ")).includes(nq),
+      )
+    : PRODUCTS.filter(TABS[i][2]);
+  const clr = `<button class="btn b2" onclick="clearSearch();shop(0)">${t("عرض كل المنتجات", "Show all products")}</button>`;
+  if (nq) {
+    g.querySelectorAll("button").forEach((b) => b.classList.remove("on"));
+    if (!list.length) {
+      box.innerHTML = `<p ${msg}>${t("لا توجد نتائج لـ", "No results for")} «${JZ.esc(sq)}»<br><br>${clr}</p>`;
+      return;
+    }
+  } else if (!list.length) {
     box.innerHTML = `<p ${msg}>${t("لا توجد منتجات في هذا القسم حاليًا.", "No products in this section right now.")}</p>`;
     return;
   }
-  box.innerHTML = list
+  const head = nq
+    ? `<p ${msg}>${t("نتائج البحث عن", "Search results for")} «${JZ.esc(sq)}» (${list.length})<br><br>${clr}</p>`
+    : "";
+  box.innerHTML = head + list
     .map((p) => {
       const name = e ? p.name_en || p.name_ar : p.name_ar,
         desc = e ? p.desc_en || p.desc_ar : p.desc_ar,
         size = e ? p.size_en || p.size_ar : p.size_ar,
         fav = JZ.isFav(p.id);
-      return `<article class="pd"><span class="hrt${fav ? " on" : ""}" role="button" tabindex="0" aria-label="${t("المفضلة", "Wishlist")}" onclick="JZ.toggleFav(${p.id})"><i class="fa-${fav ? "solid" : "regular"} fa-heart"></i></span><span class="bdg">${t(TABS[i][3], TABS[i][4])}</span><div class="ph"><img src="${JZ.esc(pimg(p.image))}" alt="${JZ.esc(name)}" loading="lazy"></div>
+      return `<article class="pd"><span class="hrt${fav ? " on" : ""}" role="button" tabindex="0" aria-label="${t("المفضلة", "Wishlist")}" onclick="JZ.toggleFav(${p.id})"><i class="fa-${fav ? "solid" : "regular"} fa-heart"></i></span><span class="bdg">${nq ? (p.category == "bundle" ? t(TABS[3][3], TABS[3][4]) : t(TABS[0][3], TABS[0][4])) : t(TABS[i][3], TABS[i][4])}</span><div class="ph"><img src="${JZ.esc(pimg(p.image))}" alt="${JZ.esc(name)}" loading="lazy"></div>
 <div class="m"><span>${t("الحجم: ", "Size: ")}${JZ.esc(size)}</span><span>${STAR(5)}</span></div><h3>${JZ.esc(name)}</h3><p>${JZ.esc(desc)}</p>
 <div class="r"><button class="btn b1" ${p.is_available ? `onclick="JZ.addToCart(${p.id})"` : "disabled"}>${p.is_available ? `<i class="fa-solid fa-cart-plus"></i> ${t("أضف للسلة", "Add to cart")}` : t("غير متاح", "Unavailable")}</button><span class="pr">${p.old_price ? `<s>${p.old_price}</s>` : ""}${p.price} ${t("ر.س", "SAR")}</span></div></article>`;
     })
@@ -157,14 +194,11 @@ function chatInit() {
   hist = [];
   say(
     t(
-      "أهلا بك في جازانا! اسألني عن أي شيء أو اختر سؤالا من الأسفل:",
-      "Welcome to Jazana! Ask me anything or pick a question below:",
+      "أهلا بك في جازانا! اسألني عن أي شيء:",
+      "Welcome to Jazana! Ask me anything:",
     ),
   );
   $("#ci").placeholder = t("اكتب سؤالك هنا...", "Type your question...");
-  $("#cq").innerHTML = QA.map(
-    (q, i) => `<button onclick="ask(${i})">${t(q[0], q[1])}</button>`,
-  ).join("");
   $("#cwt").textContent = t("مساعد جازانا", "Jazana assistant");
   $("#cwa").innerHTML =
     '<i class="fa-brands fa-whatsapp"></i> ' +
@@ -245,7 +279,7 @@ async function submitChat() {
   inp.value = "";
   say(txt, "u");
   if (AI_URL.startsWith("PUT_")) {
-    sayWA(t("اختر سؤالا من الأسفل أو تواصل معنا مباشرة.", "Pick a question below or contact us directly."));
+    sayWA(t("تواصل معنا مباشرة على واتساب.", "Please contact us directly on WhatsApp."));
     return;
   }
   busy = true;
@@ -278,8 +312,8 @@ async function submitChat() {
     } else {
       sayWA(
         t(
-          "عذرا، المساعد غير متاح حاليا. اختر سؤالا من الأسفل أو تواصل معنا على واتساب.",
-          "Sorry, the assistant is unavailable right now. Pick a question below or chat with us on WhatsApp.",
+          "عذرا، المساعد غير متاح حاليا. تواصل معنا على واتساب.",
+          "Sorry, the assistant is unavailable right now. Please chat with us on WhatsApp.",
         ),
       );
     }
@@ -302,6 +336,30 @@ $("#ci").addEventListener("keydown", (e) => {
 chatInit();
 loadProducts();
 if (lang == "en") setLang("en");
+
+/* ===== ربط البحث ===== */
+(() => {
+  const f = document.querySelector("form.sr");
+  if (!f) return;
+  f.addEventListener("submit", (e) => {
+    e.preventDefault();
+    runSearch();
+    const i = srInput();
+    if (i) i.blur(); // يقفل الكيبورد على الموبايل عشان النتائج تبان
+  });
+  srInput().addEventListener("input", (e) => {
+    if (!e.target.value.trim() && sq) {
+      sq = "";
+      refreshShop();
+    }
+  });
+  const q0 = new URLSearchParams(location.search).get("q");
+  if (q0 && $("#pg")) {
+    srInput().value = q0;
+    sq = q0.trim();
+    refreshShop();
+  }
+})();
 
 /* ===== إصلاحات القائمة الجانبية في الموبايل ===== */
 function openNav() {
@@ -484,3 +542,29 @@ document.querySelectorAll(".mv video").forEach((v) => {
   box.addEventListener("mousemove", wake);
   box.addEventListener("touchstart", wake, { passive: true });
 });
+
+/* ===== الشات على الموبايل: يتظبط مع المساحة المرئية فوق الكيبورد ===== */
+(() => {
+  const vv = window.visualViewport,
+    cw = $("#cw");
+  if (!vv || !cw) return;
+  const fit = () => {
+    // الكيبورد مفتوح = المساحة المرئية أقصر بوضوح من ارتفاع الصفحة (على الموبايل بس)
+    const kb = cw.classList.contains("on") && window.innerWidth <= 700 && window.innerHeight - vv.height > 120;
+    cw.classList.toggle("kb", kb);
+    if (kb) {
+      cw.style.setProperty("--kbt", Math.round(vv.offsetTop + 8) + "px");
+      cw.style.setProperty("--kbh", Math.round(vv.height - 16) + "px");
+      const cm = $("#cm");
+      if (cm) cm.scrollTop = cm.scrollHeight;
+    } else {
+      cw.style.removeProperty("--kbt");
+      cw.style.removeProperty("--kbh");
+    }
+  };
+  vv.addEventListener("resize", fit);
+  vv.addEventListener("scroll", fit);
+  window.addEventListener("orientationchange", () => setTimeout(fit, 300));
+  // لما الشات يتفتح/يتقفل
+  new MutationObserver(fit).observe(cw, { attributes: true, attributeFilter: ["class"] });
+})();
