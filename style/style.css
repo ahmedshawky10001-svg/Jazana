@@ -2558,3 +2558,25 @@ summary:after {
 #cm a.wl:hover {
   background: #b8913a;
 }
+/* ===== الشات على الموبايل مع الكيبورد: النافذة بتاخد المساحة المرئية فوق الكيبورد (بيتفعّل من app.js بكلاس .kb) ===== */
+@media (max-width: 700px) {
+  #cw.kb {
+    top: var(--kbt, 8px);
+    bottom: auto;
+    height: var(--kbh, auto);
+    max-height: none;
+    z-index: 26; /* فوق الشريط السفلي */
+  }
+  #cw.kb #cm {
+    flex: 1 1 0;
+    height: auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  #cw.kb header,
+  #cw.kb #cin,
+  #cw.kb .wa {
+    flex: none;
+  }
+}
