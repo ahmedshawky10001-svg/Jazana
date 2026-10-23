@@ -639,7 +639,7 @@ details p {
   font-size: 13px;
 }
 
-.ft .c>div:first-child {
+.ft .c > div:first-child {
   display: grid;
   grid-template-columns: 1.3fr 1fr 1fr 1fr;
   gap: 30px;
@@ -927,7 +927,6 @@ details p {
 }
 
 @media (max-width: 900px) {
-
   .hero .c,
   .ab .c,
   .fq {
@@ -944,7 +943,7 @@ details p {
     grid-column: auto;
   }
 
-  .ft .c>div:first-child {
+  .ft .c > div:first-child {
     grid-template-columns: 1fr 1fr;
   }
 
@@ -958,7 +957,7 @@ details p {
     padding-bottom: 64px;
   }
 
-  .top .c>span:first-child {
+  .top .c > span:first-child {
     display: none;
   }
 
@@ -1064,7 +1063,7 @@ details p {
     background: linear-gradient(transparent 30%, #000b);
   }
 
-  .hero .c>div:first-child {
+  .hero .c > div:first-child {
     padding: 0 20px;
     margin-top: -120px;
     position: relative;
@@ -1135,7 +1134,7 @@ details p {
     padding: 20px;
   }
 
-  .ft .c>div:first-child {
+  .ft .c > div:first-child {
     grid-template-columns: 1fr;
   }
 
@@ -1223,7 +1222,7 @@ h3,
   transition: 0.3s var(--ease);
 }
 
-.fs>div:hover i {
+.fs > div:hover i {
   background: var(--br);
   color: var(--gd);
   transform: rotate(-6deg) scale(1.06);
@@ -1489,9 +1488,9 @@ h3,
   box-shadow: var(--sh);
 }
 
-.fs>div,
-.rv>div,
-.sh>div,
+.fs > div,
+.rv > div,
+.sh > div,
 details {
   transition:
     transform 0.3s var(--ease),
@@ -1499,15 +1498,15 @@ details {
     border-color 0.3s;
 }
 
-.fs>div:hover,
-.rv>div:hover,
-.sh>div:hover {
+.fs > div:hover,
+.rv > div:hover,
+.sh > div:hover {
   transform: translateY(-3px);
   box-shadow: var(--sh);
   border-color: var(--gd);
 }
 
-details[open]>p {
+details[open] > p {
   animation: fade 0.3s var(--ease);
 }
 
@@ -1568,7 +1567,6 @@ details:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   *,
   *:before,
   *:after {
@@ -1663,13 +1661,12 @@ body {
 }
 
 @media (max-width: 700px) {
-
   /* تباين النصوص فوق صورة الهيرو */
-  .hero .c>div:first-child>p {
+  .hero .c > div:first-child > p {
     color: #f4e9d6;
   }
 
-  .hero .c>div:first-child>p:last-child {
+  .hero .c > div:first-child > p:last-child {
     color: #f0e5cf;
   }
 
@@ -1814,14 +1811,13 @@ summary:after {
     height: 340px;
   }
 
-  .rv>div:last-child {
+  .rv > div:last-child {
     grid-column: 1/-1;
   }
 }
 
 /* ---- موبايل: حتى 700 ---- */
 @media (max-width: 700px) {
-
   /* الشريط العلوي */
   .top .c {
     justify-content: space-between;
@@ -1829,7 +1825,7 @@ summary:after {
     gap: 8px;
   }
 
-  .top .c>span:nth-child(2) {
+  .top .c > span:nth-child(2) {
     flex: 1;
     min-width: 0;
     line-height: 1.5;
@@ -1861,7 +1857,7 @@ summary:after {
     background: #3b2a12;
   }
 
-  .hero .c>div:first-child {
+  .hero .c > div:first-child {
     margin-top: -96px;
     padding: 0 20px 28px;
     background: linear-gradient(transparent, #2a1c0a 96px);
@@ -1977,7 +1973,7 @@ summary:after {
     padding: 0 16px;
   }
 
-  .hero .c>div:first-child {
+  .hero .c > div:first-child {
     padding: 0 16px 24px;
   }
 
@@ -2021,7 +2017,7 @@ summary:after {
     flex-direction: row;
   }
 
-  .top .c>span:nth-child(2) {
+  .top .c > span:nth-child(2) {
     font-size: 10px;
   }
 
@@ -2112,7 +2108,7 @@ summary:after {
     gap: 8px;
   }
 
-  .hd .logo>span:not(.ph) {
+  .hd .logo > span:not(.ph) {
     display: none;
   }
 
@@ -2579,4 +2575,68 @@ summary:after {
   #cw.kb .wa {
     flex: none;
   }
+}
+
+/* ===== قايمة نتائج البحث تحت حقل البحث ===== */
+.sr {
+  position: relative;
+}
+#sres {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline: 0;
+  z-index: 40;
+  background: #fff;
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px #5d3e1633;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 6px;
+}
+#sres p {
+  padding: 14px 10px;
+  text-align: center;
+  color: var(--mt);
+}
+#sres .sri {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  padding: 8px;
+  border-radius: 8px;
+  background: none;
+  color: var(--tx);
+  font-size: 14px;
+  text-align: start;
+}
+#sres .sri:hover,
+#sres .sri:focus-visible {
+  background: var(--cr);
+}
+#sres .sri img {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--bd);
+}
+#sres .srn {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+#sres .sri b {
+  flex: none;
+  color: var(--br);
+  white-space: nowrap;
+}
+.pd.hit {
+  outline: 3px solid var(--gd);
+  outline-offset: 2px;
+  transition: outline-color 0.3s;
 }
